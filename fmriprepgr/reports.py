@@ -370,6 +370,7 @@ def make_report(fmriprep_output_path, reports_per_page=50,
     if not report_paths:
         FileNotFoundError("No sub-{participant_ID}.html file was found. Please check if there are any sub-{participant_ID}.html"
                           "on the provided fmriprep output directory.")
+    report_paths = all_htmls_paths
     reports = []
     for report_idx, report_path in enumerate(report_paths):
         if not 'figures' in report_path.parts:
@@ -385,8 +386,8 @@ def make_report(fmriprep_output_path, reports_per_page=50,
             # Depending which fmriprep version was used to preprocess the outputs might look different. Older versions of
             # fmriprep had figure folder at the subject level and a figure folder inside the different sessions. The code
             # below makes sure that only existing folders get copied, independent of the version used.
-            if 'session' in reports[report_idx]:
-                sessions = reports[report_idx]['session'].unique()
+            if 'session' in report:
+                sessions = report['session'].unique()
                 # drop the nan session
                 sessions = [session for session in sessions if str(session) != 'nan']
                 expected_subj_fig_dirs = [report_path.parent / f'sub-{subject}' / f'ses-{session}' / 'figures'
@@ -409,12 +410,13 @@ def make_report(fmriprep_output_path, reports_per_page=50,
                     # Check if fmriprep-group-report figure directory already exists or is symlink
                     if subj_group_fig_dirs[expected_subj_idx].is_symlink() or \
                        subj_group_fig_dirs[expected_subj_idx].exists():
-                        raise ValueError(
-                            f"{subj_group_fig_dirs[expected_subj_idx]} exists and would be overwritten. "
-                            f"Rename or delete the existing group directory before running fmriprepgr.")
+                        pass
+#                        raise ValueError(
+#                            f"{subj_group_fig_dirs[expected_subj_idx]} exists and would be overwritten. "
+#                            f"Rename or delete the existing group directory before running fmriprepgr.")
 
                     # only create session folders
-                    if ('session' in reports[report_idx]) and expected_subj_fig_dir.parents[0].name.startswith('ses-'):
+                    if ('session' in report) and expected_subj_fig_dir.parents[0].name.startswith('ses-'):
                         group_session_dirs[expected_subj_idx].mkdir(exist_ok=True)
                     # I don't like any of the relative path tools in python
                     # To get the relative path I want I've got to start from a place on the common path of
@@ -445,6 +447,8 @@ def make_report(fmriprep_output_path, reports_per_page=50,
                                   " A default fmriprep is expected by this script.")
 
             for path in paths:
+                if path['subj_group_fig_dir'].exists():
+                    continue
                 if image_changes:
                     copytree(path['subj_group_fig_dir'].parent / path['orig_fig_dir'], path['subj_group_fig_dir'])
                 else:
@@ -495,4 +499,3 @@ def make_report(fmriprep_output_path, reports_per_page=50,
                                   lines,
                                   html_foot])
             consolidated_path.write_text(rpt_text)
-
